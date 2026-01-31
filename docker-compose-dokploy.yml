@@ -5,7 +5,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: pteroca
-      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_USER: ${MYSQL_USER:-pteroca}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
@@ -13,6 +13,8 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
       retries: 10
+    networks:
+      - internal
 
   web:
     build:
@@ -26,9 +28,7 @@ services:
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET}
-      MYSQL_USER: ${MYSQL_USER:-user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      DATABASE_URL: "mysql://${MYSQL_USER:-user}:${MYSQL_PASSWORD}@db:3306/pteroca?serverVersion=8.0"
+      DATABASE_URL: "mysql://${MYSQL_USER:-pteroca}:${MYSQL_PASSWORD}@db:3306/pteroca?serverVersion=8.0"
       CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     volumes:
@@ -37,6 +37,8 @@ services:
     expose:
       - "80"
     working_dir: /app
+    networks:
+      - internal
     command: >
       sh -c "
         echo 'Testing DB connection...'
@@ -48,21 +50,12 @@ services:
           sleep 2
         done
 
-        echo 'Database is ready, clearing cache...'
         php bin/console cache:clear --no-warmup || true
-
-        echo 'Installing assets...'
         php bin/console assets:install public --symlink --relative
-
-        echo 'Running migrations...'
         php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
-
-        echo 'Setting up permissions...'
         mkdir -p /app/var/log /app/var/cache /app/public/uploads
         chown -R www-data:www-data /app/var /app/public/uploads
         chmod -R 775 /app/var /app/public/uploads
-
-        echo 'Starting production server...'
         /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
       "
 
@@ -70,3 +63,7 @@ volumes:
   db_data:
   app_var:
   app_uploads:
+
+networks:
+  internal:
+    driver: bridge
