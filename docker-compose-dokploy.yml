@@ -34,6 +34,8 @@ services:
     volumes:
       - app_var:/app/var
       - app_uploads:/app/public/uploads
+      - app_plugins:/app/plugins
+      - app_themes:/app/themes
     expose:
       - "80"
     working_dir: /app
@@ -63,6 +65,8 @@ volumes:
   db_data:
   app_var:
   app_uploads:
+  app_plugins:
+  app_themes:
 
 networks:
   internal:
